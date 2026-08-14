@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entities Manager (People/Companies)</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <!-- NAVIGATION HEADER -->
+    <nav class="navbar navbar-dark bg-dark px-3 justify-content-between mb-4">
+        <div>
+            <a class="navbar-brand me-4" href="/dashboard">← System Dashboard</a>
+            <span class="navbar-text text-white-50">Enterprise Business Entities Matrix</span>
+        </div>
+        <div>
+            <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Business Entities Registry</h1>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEntityModal">+ Register Entity</button>
+        </div>
+
+        <div class="card shadow-sm mb-5">
+            <div class="card-body p-0">
+                <table class="table table-hover table-striped align-middle m-0">
+                    <thead class="table-dark">
+                        <tr>
+                            {% for col in columns %}
+                            <th>
+                                {% set target_order = next_order if col == current_sort else 'ASC' %}
+                                <a href="/entities-view?sort_by={{ col }}&order={{ target_order }}" class="text-white text-decoration-none">
+                                    {{ col | replace('_', ' ') | capitalize }}
+                                    {% if col == current_sort %}
+                                        {% if current_order == 'ASC' %}▲{% else %}▼{% endif %}
+                                    {% else %}↕{% endif %}
+                                </a>
+                            </th>
+                            {% endfor %}
+                            <th>Actions</th> 
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                        <tr>
+                            {% for col in columns %}
+                            <td>
+                                {% if col == 'entity_type' %}
+                                    <span class="badge {% if row[col] == 'PERSON' %}bg-info text-dark{% elif row[col] == 'COMPANY' %}bg-success text-white{% else %}bg-secondary text-white{% endif %}">
+                                        {{ row[col] }}
+                                    </span>
+                                {% else %}
+                                    {{ row[col] }}
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+
+                            <!-- ACTION CELL: Kept completely outside the data loop -->
+                            <td>
+								<!-- EDIT BUTTON: Dynamic data loop matching the exact schema definition -->
+								<button class="btn btn-sm btn-warning edit-btn" data-bs-toggle="modal" data-bs-target="#editEntityModal"
+									{% for col in columns %}
+									data-{{ col }}="{{ row[col] }}"
+									{% endfor %}>
+									Edit
+								</button>
+								<!-- DELETE BUTTON: Clean dictionary lookup matching main.py mapping -->
+								<form action="/entities/delete/{{ row['id'] }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this record?');">
+									<button type="submit" class="btn btn-sm btn-danger">Delete</button>
+								</form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="small text-muted mb-4">
+            <span class="badge bg-info text-dark">PERSON</span>
+            <span class="badge bg-success text-white ms-2">COMPANY</span>
+        </div>
+    </div>
+
+    <!-- ADD ENTITY MODAL -->
+    <div class="modal fade" id="addEntityModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Register New Account Entity</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/entities/create" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="entity-type">Classification Profile Type</label>
+                            <select class="form-select" id="entity-type" name="entity_type" required>
+                                <option value="PERSON">PERSON</option>
+                                <option value="COMPANY">COMPANY</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Company/Legal Name</label>
+                            <input type="text" class="form-control" name="name" placeholder="e.g. Northwind Trading" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Primary Contact Email</label>
+                            <input type="email" class="form-control" name="email" placeholder="e.g. billing@company.com">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Save Record</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT ENTITY MODAL -->
+    <div class="modal fade" id="editEntityModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Registration Parameters</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/entities/update" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="edit-id">
+						
+                        <div class="mb-3">
+                            <label class="form-label" for="edit-entity_type">Classification Profile Type</label>
+                            <select class="form-select" name="entity_type" id="edit-entity_type" required>
+                                <option value="PERSON">PERSON</option>
+                                <option value="COMPANY">COMPANY</option>
+                            </select>
+                        </div>
+						
+						<!-- Dynamic visible fields loop -->
+                        {% for col in columns %}
+                        {% if col != 'id' and col != 'created_at' %}
+                        <div class="mb-3">
+                            <label class="form-label text-capitalize">{{ col }}</label>
+                            <input type="text" class="form-control" name="{{ col }}" id="edit-{{ col }}" required>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+						
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">Update Parameters</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/bootstrap.bundle.min.js?v=2"></script>
+    <script>
+        const editButtons = document.querySelectorAll('.edit-btn');
+        editButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Read from the exact data properties provided by our loop
+                document.getElementById('edit-id').value = this.getAttribute('data-id');
+                document.getElementById('edit-entity_type').value = this.getAttribute('data-entity_type');
+                document.getElementById('edit-name').value = this.getAttribute('data-name');
+                document.getElementById('edit-email').value = this.getAttribute('data-email');
+            });
+        });
+    </script>
+</body>
+</html>

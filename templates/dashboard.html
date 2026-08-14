@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+	<link href="/static/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <!-- Navbar Navigation Layout Anchor -->
+    <nav class="navbar navbar-dark bg-dark px-3 justify-content-between">
+        <a class="navbar-brand" href="#">System Control Center</a>
+        <div class="text-white">
+            <span>Welcome, <strong>{{ username }}</strong></span> | 
+            <a href="/logout" class="btn btn-sm btn-danger ms-2">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Application Dashboard Matrix</h2>
+                <p class="text-muted">Real-time status overview of system data components.</p>
+            </div>
+        </div>
+
+        <!-- Streamlined Metrics Cards Section -->
+        <div class="row text-center mb-5 justify-content-center">
+            <div class="col-md-5">
+                <div class="card text-white bg-success mb-3 shadow-sm">
+                    <div class="card-body py-4">
+                        <h5 class="card-title">Database Audit Tracker</h5>
+                        <p class="card-text display-6">{{ total_logs }} Logs</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="card text-white bg-primary mb-3 shadow-sm">
+                    <div class="card-body py-4">
+                        <h5 class="card-title">System Modules</h5>
+                        <p class="card-text fs-5">Active Management Mode</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Entities Breakdown Summary Layout Block Component -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold">Registered Entities Counter</div>
+                    <div class="card-body">
+                        {% if entity_breakdown %}
+                        <ul class="list-group list-group-flush">
+                            {% for item in entity_breakdown %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ item.entity_type }}
+                                <span class="badge bg-primary rounded-pill">{{ item.qty }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted">No entities registered.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Panel Layout Options Context Component -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold">System Management Navigation Links</div>
+                    <div class="card-body d-flex flex-column gap-2 justify-content-center px-4">
+                        <a href="/checkout" class="btn btn-primary py-3 fw-bold shadow-sm">🛒 Open Checkout Wizard (New Order)</a>
+                        <a href="/orders-view" class="btn btn-outline-info py-2">View Enterprise Order Invoice Streams</a>
+                        <a href="/products-view" class="btn btn-outline-success py-2">View & Manage Inventory Products Catalog</a>
+                        <a href="/entities-view" class="btn btn-outline-primary py-2">View & Edit Business Entities Registry</a>
+                        <a href="/users-view" class="btn btn-outline-dark py-2">View & Edit Users Datagrid</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

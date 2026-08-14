@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Products Inventory Manager</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark px-3 justify-content-between mb-4">
+        <div>
+            <a class="navbar-brand me-4" href="/dashboard">← System Dashboard</a>
+            <span class="navbar-text text-white-50">Stock Room Registry</span>
+        </div>
+        <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Product Master Catalog</h1>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProductModal">+ Add Stock Item</button>
+        </div>
+
+        <div class="card shadow-sm mb-5">
+            <div class="card-body">
+                <table class="table table-hover table-striped align-middle m-0">
+                    <thead class="table-dark">
+                        <tr>
+                            {% for col in columns %}
+                            <th>
+                                {% set target_order = next_order if col == current_sort else 'ASC' %}
+                                <a href="/products-view?sort_by={{ col }}&order={{ target_order }}" class="text-white text-decoration-none">
+                                    {{ col | replace('_', ' ') | capitalize }}
+                                    {% if col == current_sort %}
+                                        {% if current_order == 'ASC' %}▲{% else %}▼{% endif %}
+                                    {% else %}↕{% endif %}
+                                </a>
+                            </th>
+                            {% endfor %}
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                        <tr>
+                            <td>{{ row.id }}</td>
+                            <td><strong>{{ row.name }}</strong></td>
+                            <td><code class="text-dark">{{ row.sku }}</code></td>
+                            <td>${{ "{:,.2f}".format(row.price | float) }}</td>
+                            <td>
+                                <span class="badge {% if row.stock_quantity > 10 %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ row.stock_quantity }} units
+                                </span>
+                            </td>
+                            <td>{{ row.created_at }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning edit-product-btn" data-bs-toggle="modal" data-bs-target="#editProductModal"
+                                    data-id="{{ row.id }}" data-name="{{ row.name }}" data-sku="{{ row.sku }}" data-price="{{ row.price }}" data-stock_quantity="{{ row.stock_quantity }}">
+                                    Edit
+                                </button>
+                                <form action="/products/delete/{{ row.id }}" method="POST" class="d-inline" onsubmit="return confirm('Remove product entirely from inventory catalog?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL MARKUP CONFIGURATIONS (Add Product) -->
+    <div class="modal fade" id="addProductModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Add Inventory Catalog Item</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <form action="/products/create" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3"><label class="form-label">Product Name</label><input type="text" class="form-control" name="name" required></div>
+                        <div class="mb-3"><label class="form-label">Unique Stock Code (SKU)</label><input type="text" class="form-control" name="sku" required></div>
+                        <div class="mb-3"><label class="form-label">Price ($)</label><input type="number" step="0.01" class="form-control" name="price" required></div>
+                        <div class="mb-3"><label class="form-label">Starting Units Stock Balance</label><input type="number" class="form-control" name="stock_quantity" required></div>
+                    </div>
+                    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Save Entry</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL MARKUP CONFIGURATIONS (Edit Product) -->
+    <div class="modal fade" id="editProductModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Edit Product Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <form action="/products/update" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="prod-id">
+                        <div class="mb-3"><label class="form-label">Product Name</label><input type="text" class="form-control" name="name" id="prod-name" required></div>
+                        <div class="mb-3"><label class="form-label">Stock Code (SKU)</label><input type="text" class="form-control" name="sku" id="prod-sku" required></div>
+                        <div class="mb-3"><label class="form-label">Price ($)</label><input type="number" step="0.01" class="form-control" name="price" id="prod-price" required></div>
+                        <div class="mb-3"><label class="form-label">Adjust Units Stock Balance</label><input type="number" class="form-control" name="stock_quantity" id="prod-qty" required></div>
+                    </div>
+                    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-warning">Update Entry</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/bootstrap.bundle.min.js"></script>
+    <script>
+        document.querySelectorAll('.edit-product-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.getElementById('prod-id').value = this.getAttribute('data-id');
+                document.getElementById('prod-name').value = this.getAttribute('data-name');
+                document.getElementById('prod-sku').value = this.getAttribute('data-sku');
+                document.getElementById('prod-price').value = this.getAttribute('data-price');
+                document.getElementById('prod-qty').value = this.getAttribute('data-stock_quantity');
+            });
+        });
+    </script>
+</body>
+</html>

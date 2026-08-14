@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - System Platform</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
+    <div class="card shadow p-4" style="width: 400px;">
+        <h3 class="text-center mb-4">Account Login</h3>
+        
+        <!-- DYNAMIC ALERTS WRAPPER PANEL CONTEXT -->
+        <!-- Backend flash error template logic wrapper -->
+        {% if error %}
+        <div class="alert alert-danger" role="alert">{{ error }}</div>
+        {% endif %}
+
+        <!-- JavaScript URL query string error injection container -->
+        <div id="url-error-alert" class="alert alert-danger d-none" role="alert"></div>
+
+        <form action="/login" method="POST">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Sign In</button>
+        </form>
+    </div>
+
+    <!-- URL QUERY EXTRACTOR JAVASCRIPT BLOCK ENGINE -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // 1. Parse the window browser location search parameters matrix
+            const urlParams = new URLSearchParams(window.location.search);
+            const errorMessage = urlParams.get('error');
+
+            // 2. If an error keyword is located, strip danger tags and display it 
+            if (errorMessage) {
+                const alertContainer = document.getElementById('url-error-alert');
+                
+                // Set the text content safely to block cross-site scripting vulnerabilities
+                alertContainer.textContent = errorMessage;
+                
+                // Remove the bootstrap hidden layer utility class to show the box
+                alertContainer.classList.remove('d-none');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enterprise Transaction Logs</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark px-3 justify-content-between mb-4">
+        <div>
+            <a class="navbar-brand me-4" href="/dashboard">← System Dashboard</a>
+            <span class="navbar-text text-white-50">Transaction Tracking Room</span>
+        </div>
+        <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
+    </nav>
+
+    <div class="container">
+        <h1 class="mb-4">Orders & Invoiced Line Items</h1>
+        
+        {% if not orders %}
+        <div class="alert alert-info">No orders currently saved in the database context logs.</div>
+        {% else %}
+        
+        {% for o in orders %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <div>
+                    <h5 class="m-0 text-primary">Invoice Account ID: #{{ o.order_id }}</h5>
+                    <small class="text-muted">Purchased on: {{ o.created_at }}</small>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-secondary p-2 text-uppercase mb-1 d-block">{{ o.status }}</span>
+                    <strong>Customer:</strong> {{ o.customer_name }}
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-striped table-hover m-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Item Name / SKU</th>
+                            <th class="text-center">Quantity</th>
+                            <th class="text-end">Unit Price Locked</th>
+                            <th class="text-end pe-4">Line Row Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items if item.order_id == o.order_id %}
+                        <tr>
+                            <td class="ps-4">
+                                <strong>{{ item.product_name }}</strong><br>
+                                <small class="text-muted"><code class="text-dark">{{ item.sku }}</code></small>
+                            </td>
+                            <td class="text-center">{{ item.quantity }}</td>
+                            <td class="text-end">${{ "{:,.2f}".format(item.unit_price | float) }}</td>
+                            <td class="text-end pe-4 fw-bold">${{ "{:,.2f}".format(item.row_total | float) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice Checkout Wizard</title>
+    <!-- FIXED: Loading your local CSS asset properly -->
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark px-3 justify-content-between mb-4">
+        <div>
+            <a class="navbar-brand me-4" href="/dashboard">← System Dashboard</a>
+            <span class="navbar-text text-white-50">Sales Register Desk</span>
+        </div>
+        <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
+    </nav>
+
+    <div class="container mt-4">
+        <h1 class="mb-4">Create New Sales Order Invoice</h1>
+
+        <form action="/checkout/create" method="POST" id="checkout-form">
+            
+            <!-- FIXED STEP 1 WRAPPER GRID BLOCK CONTEXT -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white font-weight-bold fw-bold">Step 1: Account Customer Selection</div>
+                <div class="card-body">
+                    <label class="form-label" for="entity-id">Select Registered Account Client</label>
+                    <select class="form-select" id="entity-id" name="entity_id" required>
+                        <option value="" disabled selected>-- Choose Customer --</option>
+                        {% for c in customers %}
+                        <option value="{{ c.id }}">{{ c.name }} ({{ c.entity_type }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- STEP 2: PRODUCTS SPREADSHEET TABLE GRID CONTROLS -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Step 2: Add Invoiced Products Catalog Line Items</span>
+                    <button type="button" class="btn btn-sm btn-primary" id="add-row-btn">+ Add Line Row</button>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table m-0 align-middle" id="items-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4" style="width: 50%;">Product Selection</th>
+                                <th class="text-center" style="width: 15%;">Quantity</th>
+                                <th class="text-end" style="width: 15%;">Unit Price</th>
+                                <th class="text-end" style="width: 15%;">Row Total</th>
+                                <th class="text-center" style="width: 5%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoice-rows-container">
+                            <!-- Rows added dynamically via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+                    <h4 class="m-0">Total Sales Value:</h4>
+                    <h3 class="m-0 text-success fw-bold">$<span id="grand-total-label">0.00</span></h3>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 justify-content-end mb-5">
+                <a href="/dashboard" class="btn btn-secondary">Discard Invoice</a>
+                <button type="submit" class="btn btn-success px-4">Post & Finalize Order Transaction</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Hidden parsing engine metadata storage panel blocks context element -->
+    <div class="d-none" id="product-meta-source">
+        {% for p in products %}
+        <span id="meta-p-{{ p.id }}" data-price="{{ p.price }}" data-stock="{{ p.stock_quantity }}"></span>
+        {% endfor %}
+    </div>
+
+    <!-- FIXED: Loading your local JS bundle bundle asset properly -->
+    <script src="/static/bootstrap.bundle.min.js?v=2"></script>
+    <script>
+        const container = document.getElementById('invoice-rows-container');
+        const addBtn = document.getElementById('add-row-btn');
+        const grandTotalLabel = document.getElementById('grand-total-label');
+
+        // Dynamic element layout text generation engine blueprint matching selector
+        const productOptionsHTML = `
+            <option value="" disabled selected>-- Select Product Item --</option>
+            {% for p in products %}
+            <option value="{{ p.id }}">{{ p.name }} (Available: {{ p.stock_quantity }})</option>
+            {% endfor %}
+        `;
+
+        function createInvoiceLineRow() {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="ps-4">
+                    <select class="form-select prod-selector-input" name="product_id[]" required>
+                        ${productOptionsHTML}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control text-center qty-selector-input" name="quantity[]" min="1" value="1" required>
+                </td>
+                <td class="text-end text-muted">$<span class="unit-price-cell">0.00</span></td>
+                <td class="text-end fw-bold text-dark">$<span class="row-total-cell">0.00</span></td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-row-btn">×</button>
+                </td>
+            `;
+            container.appendChild(tr);
+            attachRowEventHandlers(tr);
+        }
+
+        function attachRowEventHandlers(row) {
+            const selector = row.querySelector('.prod-selector-input');
+            const qtyInput = row.querySelector('.qty-selector-input');
+            const priceCell = row.querySelector('.unit-price-cell');
+            const totalCell = row.querySelector('.row-total-cell');
+            const removeBtn = row.querySelector('.remove-row-btn');
+
+            function recalculateRowState() {
+                const prodId = selector.value;
+                if (!prodId) return;
+
+                const meta = document.getElementById(`meta-p-${prodId}`);
+                const price = parseFloat(meta.getAttribute('data-price') || 0);
+                const stock = parseInt(meta.getAttribute('data-stock') || 0);
+
+                qtyInput.setAttribute('max', stock);
+                if (parseInt(qtyInput.value) > stock) {
+                    qtyInput.value = stock;
+                }
+
+                const qty = parseInt(qtyInput.value || 0);
+                const subtotal = price * qty;
+
+                priceCell.textContent = price.toFixed(2);
+                totalCell.textContent = subtotal.toFixed(2);
+                calculateGrandInvoiceSummary();
+            }
+
+            selector.addEventListener('change', recalculateRowState);
+            qtyInput.addEventListener('input', recalculateRowState);
+            
+            removeBtn.addEventListener('click', () => {
+                row.remove();
+                calculateGrandInvoiceSummary();
+            });
+        }
+
+        function calculateGrandInvoiceSummary() {
+            let total = 0;
+            document.querySelectorAll('.row-total-cell').forEach(cell => {
+                total += parseFloat(cell.textContent || 0);
+            });
+            grandTotalLabel.textContent = total.toFixed(2);
+        }
+
+        addBtn.addEventListener('click', createInvoiceLineRow);
+        document.addEventListener('DOMContentLoaded', createInvoiceLineRow);
+    </script>
+</body>
+</html>
