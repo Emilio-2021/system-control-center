@@ -144,13 +144,10 @@ def view_dashboard(request: Request, username: str = Depends(verify_session_cook
     # Cleaned: Removed the tasks SQL query entirely
     entities_res = db.execute(text("SELECT entity_type, COUNT(*) as qty FROM entities GROUP BY entity_type")).fetchall()
     entities_data = [dict(row._mapping) for row in entities_res]
-    audit_res = db.execute(text("SELECT COUNT(*) FROM audit_logs")).scalar()
-
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "username": username,
-        "entity_breakdown": entities_data,
-        "total_logs": audit_res or 0
+        "entity_breakdown": entities_data
     })
 # Keep your existing '/users-view', '/users/create', etc. below this point...
 #-------------------------------------------------------------------------------
