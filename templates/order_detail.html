@@ -24,6 +24,12 @@
             <a href="{{ back_url }}" class="btn btn-outline-secondary">{{ back_label }}</a>
         </div>
 
+        {% if role == 'viewer' %}
+        <div class="alert alert-info" role="alert">
+            <strong>Read-only order view:</strong> You can review this order, but only administrators and operators can issue refunds.
+        </div>
+        {% endif %}
+
         <div class="row g-4">
             <div class="col-md-4">
                 <div class="card shadow-sm h-100">
