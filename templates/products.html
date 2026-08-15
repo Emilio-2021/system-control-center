@@ -20,6 +20,12 @@
             {% if role == 'admin' %}<button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProductModal">+ Add Stock Item</button>{% endif %}
         </div>
 
+        {% if role != 'admin' %}
+        <div class="alert alert-info" role="alert">
+            <strong>Read-only catalog:</strong> Product creation, editing, and deletion are restricted to administrators.
+        </div>
+        {% endif %}
+
         <div class="card shadow-sm mb-5">
             <div class="card-body">
                 <table class="table table-hover table-striped align-middle m-0">
@@ -46,12 +52,13 @@
                             <td><strong>{{ row.name }}</strong></td>
                             <td><code class="text-dark">{{ row.sku }}</code></td>
                             <td>${{ "{:,.2f}".format(row.price | float) }}</td>
-                            {% if role == 'admin' %}<td>
+                            <td>
                                 <span class="badge {% if row.stock_quantity > 10 %}bg-success{% else %}bg-danger{% endif %}">
                                     {{ row.stock_quantity }} units
                                 </span>
-                            </td>{% endif %}
+                            </td>
                             <td>{{ row.created_at }}</td>
+                            {% if role == 'admin' %}
                             <td>
                                 <button class="btn btn-sm btn-warning edit-product-btn" data-bs-toggle="modal" data-bs-target="#editProductModal"
                                     data-id="{{ row.id }}" data-name="{{ row.name }}" data-sku="{{ row.sku }}" data-price="{{ row.price }}" data-stock_quantity="{{ row.stock_quantity }}">
@@ -61,6 +68,7 @@
                                     <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                 </form>
                             </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>

@@ -23,6 +23,8 @@ FastAPI application (Python)
 - Product catalog and inventory tracking
 - Checkout workflow with stock locking and order creation
 - Order and line-item history
+- Individual order details and transactional full refunds
+- Dashboard recent-order links with contextual navigation back to the originating page
 - Dashboard metrics
 
 ## Technology stack
@@ -103,6 +105,7 @@ Never commit `.env` or production credentials to source control.
 | `/products-view` | Inventory management |
 | `/checkout` | Create an order |
 | `/orders-view` | View order history |
+| `/orders/{order_id}` | View an individual order and process a full refund |
 
 ## Roles
 

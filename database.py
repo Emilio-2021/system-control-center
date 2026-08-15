@@ -34,7 +34,34 @@ def _ensure_sqlite_roles():
         ))
 
 
+def _ensure_sqlite_refund_tables():
+    """Create local refund tables without changing the original order records."""
+    if not SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+        return
+    with engine.begin() as connection:
+        connection.execute(text("""
+            CREATE TABLE IF NOT EXISTS order_refunds (
+                id INTEGER PRIMARY KEY,
+                order_id INTEGER NOT NULL UNIQUE,
+                refunded_by INTEGER,
+                reason VARCHAR(255),
+                amount NUMERIC(10, 2) NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        connection.execute(text("""
+            CREATE TABLE IF NOT EXISTS order_refund_items (
+                id INTEGER PRIMARY KEY,
+                refund_id INTEGER NOT NULL,
+                order_item_id INTEGER NOT NULL,
+                quantity INTEGER NOT NULL,
+                unit_price NUMERIC(10, 2) NOT NULL
+            )
+        """))
+
+
 _ensure_sqlite_roles()
+_ensure_sqlite_refund_tables()
 SessionLocal = sessionmaker(autocommit=False,autoflush=False,bind=engine)
 Base = declarative_base()
 

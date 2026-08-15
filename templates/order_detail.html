@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order #{{ order.order_id }}</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark px-3 justify-content-between mb-4">
+        <a class="navbar-brand" href="/dashboard">System Control Center</a>
+        <div>
+            <span class="text-white me-3">{{ role }}</span>
+            <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1>Order #{{ order.order_id }}</h1>
+                <p class="text-muted mb-0">Created {{ order.created_at }}</p>
+            </div>
+            <a href="{{ back_url }}" class="btn btn-outline-secondary">{{ back_label }}</a>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold">Order Summary</div>
+                    <div class="card-body">
+                        <p><strong>Customer:</strong><br>{{ order.customer_name }}</p>
+                        <p><strong>Email:</strong><br>{{ order.customer_email or 'Not provided' }}</p>
+                        <p><strong>Status:</strong><br><span class="badge bg-secondary text-uppercase">{{ order.status }}</span></p>
+                        <p class="mb-0"><strong>Total:</strong><br><span class="fs-4 text-success">${{ "{:,.2f}".format(order.order_total | float) }}</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white fw-bold">Invoice Line Items</div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped mb-0">
+                            <thead>
+                                <tr><th>Product</th><th>SKU</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>{{ item.product_name }}</td>
+                                    <td><code>{{ item.sku }}</code></td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>${{ "{:,.2f}".format(item.unit_price | float) }}</td>
+                                    <td>${{ "{:,.2f}".format(item.row_total | float) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {% if refund %}
+                <div class="alert alert-warning mt-4">
+                    <strong>Refunded:</strong> ${{ "{:,.2f}".format(refund.amount | float) }} on {{ refund.created_at }}.
+                    <br><span>Reason: {{ refund.reason }}</span>
+                </div>
+                {% elif order.status == 'COMPLETED' and role in ['admin', 'operator'] %}
+                <div class="card shadow-sm mt-4 border-warning">
+                    <div class="card-header bg-warning-subtle fw-bold">Refund Completed Order</div>
+                    <div class="card-body">
+                        <p class="text-muted">A full refund restores the ordered quantities to inventory and permanently marks this order as refunded.</p>
+                        <form method="POST" action="/orders/{{ order.order_id }}/refund">
+                            <label class="form-label" for="refund-reason">Reason</label>
+                            <input class="form-control mb-3" id="refund-reason" name="reason" value="Customer refund" maxlength="255" required>
+                            <button type="submit" class="btn btn-warning" onclick="return confirm('Refund this completed order and restore its inventory?');">Issue Full Refund</button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

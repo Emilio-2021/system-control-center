@@ -25,6 +25,12 @@
             {% if role == 'admin' %}<button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEntityModal">+ Register Entity</button>{% endif %}
         </div>
 
+        {% if role != 'admin' %}
+        <div class="alert alert-info" role="alert">
+            <strong>Read-only registry:</strong> Entity creation, editing, and deletion are restricted to administrators.
+        </div>
+        {% endif %}
+
         <div class="card shadow-sm mb-5">
             <div class="card-body p-0">
                 <table class="table table-hover table-striped align-middle m-0">

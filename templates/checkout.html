@@ -10,13 +10,19 @@
     <nav class="navbar navbar-dark bg-dark px-3 justify-content-between mb-4">
         <div>
             <a class="navbar-brand me-4" href="/dashboard">← System Dashboard</a>
-            <span class="navbar-text text-white-50">Sales Register Desk</span>
+            <span class="navbar-text text-white-50">Sales Register Desk <span class="badge bg-secondary">{{ role }}</span></span>
         </div>
         <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
     </nav>
 
     <div class="container mt-4">
         <h1 class="mb-4">Create New Sales Order Invoice</h1>
+
+        {% if role == 'viewer' %}
+        <div class="alert alert-info" role="alert">
+            <strong>Read-only access:</strong> You can review the checkout catalog, but only administrators and operators can create orders.
+        </div>
+        {% endif %}
 
         <form action="/checkout/create" method="POST" id="checkout-form">
             
@@ -25,7 +31,7 @@
                 <div class="card-header bg-white font-weight-bold fw-bold">Step 1: Account Customer Selection</div>
                 <div class="card-body">
                     <label class="form-label" for="entity-id">Select Registered Account Client</label>
-                    <select class="form-select" id="entity-id" name="entity_id" required>
+                    <select class="form-select" id="entity-id" name="entity_id" required {% if role == 'viewer' %}disabled{% endif %}>
                         <option value="" disabled selected>-- Choose Customer --</option>
                         {% for c in customers %}
                         <option value="{{ c.id }}">{{ c.name }} ({{ c.entity_type }})</option>
@@ -38,7 +44,7 @@
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <span class="fw-bold">Step 2: Add Invoiced Products Catalog Line Items</span>
-                    <button type="button" class="btn btn-sm btn-primary" id="add-row-btn">+ Add Line Row</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="add-row-btn" {% if role == 'viewer' %}disabled{% endif %}>+ Add Line Row</button>
                 </div>
                 <div class="card-body p-0">
                     <table class="table m-0 align-middle" id="items-table">
@@ -64,7 +70,7 @@
 
             <div class="d-flex gap-2 justify-content-end mb-5">
                 <a href="/dashboard" class="btn btn-secondary">Discard Invoice</a>
-                <button type="submit" class="btn btn-success px-4">Post & Finalize Order Transaction</button>
+                <button type="submit" class="btn btn-success px-4" {% if role == 'viewer' %}disabled{% endif %}>Post & Finalize Order Transaction</button>
             </div>
         </form>
     </div>
@@ -82,6 +88,7 @@
         const container = document.getElementById('invoice-rows-container');
         const addBtn = document.getElementById('add-row-btn');
         const grandTotalLabel = document.getElementById('grand-total-label');
+        const readOnly = {{ 'true' if role == 'viewer' else 'false' }};
 
         // Dynamic element layout text generation engine blueprint matching selector
         const productOptionsHTML = `
@@ -92,6 +99,7 @@
         `;
 
         function createInvoiceLineRow() {
+            if (readOnly) return;
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="ps-4">

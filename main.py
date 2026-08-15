@@ -170,11 +170,26 @@ def view_dashboard(request: Request, username: str = Depends(verify_session_cook
         ORDER BY et.entity
     """)).fetchall()
     entities_data = [dict(row._mapping) for row in entities_res]
+    recent_orders_res = db.execute(text("""
+        SELECT o.id AS order_id,
+               e.name AS customer_name,
+               o.status,
+               o.created_at,
+               COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS order_total
+        FROM orders o
+        INNER JOIN entities e ON o.entity_id = e.id
+        LEFT JOIN order_items oi ON oi.order_id = o.id
+        GROUP BY o.id, e.name, o.status, o.created_at
+        ORDER BY o.created_at DESC
+        LIMIT 5
+    """)).fetchall()
+    recent_orders = [dict(row._mapping) for row in recent_orders_res]
     role = db.execute(text("SELECT role FROM users WHERE username = :username"), {"username": username}).scalar()
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "username": username,
         "entity_breakdown": entities_data,
+        "recent_orders": recent_orders,
         "role": role
     })
 # Keep your existing '/users-view', '/users/create', etc. below this point...
@@ -602,6 +617,142 @@ def view_orders(request: Request, username: str = Depends(verify_session_cookie)
         "orders": orders_list,
         "items": items_list
     })
+
+
+@app.get('/orders/{order_id}', response_class=HTMLResponse)
+def view_order_detail(
+    order_id: int,
+    request: Request,
+    back: str = "dashboard",
+    username: str = Depends(verify_session_cookie),
+    db: Session = Depends(get_db),
+):
+    if back not in {"dashboard", "orders"}:
+        back = "dashboard"
+    order = db.execute(text("""
+        SELECT o.id AS order_id, e.name AS customer_name, e.email AS customer_email,
+               o.status, o.created_at,
+               COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS order_total
+        FROM orders o
+        INNER JOIN entities e ON o.entity_id = e.id
+        LEFT JOIN order_items oi ON oi.order_id = o.id
+        WHERE o.id = :order_id
+        GROUP BY o.id, e.name, e.email, o.status, o.created_at
+    """), {"order_id": order_id}).mappings().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    items = db.execute(text("""
+        SELECT oi.id AS order_item_id, p.name AS product_name, p.sku,
+               oi.quantity, oi.unit_price,
+               (oi.quantity * oi.unit_price) AS row_total
+        FROM order_items oi
+        INNER JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = :order_id
+        ORDER BY oi.id
+    """), {"order_id": order_id}).mappings().all()
+    refund = db.execute(text("""
+        SELECT id, refunded_by, reason, amount, created_at
+        FROM order_refunds
+        WHERE order_id = :order_id
+    """), {"order_id": order_id}).mappings().first()
+    role = db.execute(text("SELECT role FROM users WHERE username = :username"), {"username": username}).scalar()
+
+    return templates.TemplateResponse("order_detail.html", {
+        "request": request,
+        "order": order,
+        "items": items,
+        "refund": refund,
+        "role": role,
+        "back_url": "/orders-view" if back == "orders" else "/dashboard",
+        "back_label": "Back to Orders" if back == "orders" else "Back to Dashboard",
+    })
+
+
+@app.post('/orders/{order_id}/refund')
+async def refund_order(
+    order_id: int,
+    request: Request,
+    username: str = Depends(require_operator),
+    db: Session = Depends(get_db),
+):
+    form_data = await request.form()
+    reason = str(form_data.get("reason", "Customer refund")).strip() or "Customer refund"
+
+    try:
+        order = db.execute(text("""
+            SELECT o.id, o.status,
+                   COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS order_total
+            FROM orders o
+            LEFT JOIN order_items oi ON oi.order_id = o.id
+            WHERE o.id = :order_id
+            GROUP BY o.id, o.status
+        """), {"order_id": order_id}).mappings().first()
+        if not order:
+            raise ValueError("Order not found")
+        if order["status"] != "COMPLETED":
+            raise ValueError("Only completed orders can be refunded")
+
+        existing_refund = db.execute(
+            text("SELECT 1 FROM order_refunds WHERE order_id = :order_id"),
+            {"order_id": order_id},
+        ).scalar()
+        if existing_refund:
+            raise ValueError("This order has already been refunded")
+
+        items = db.execute(text("""
+            SELECT oi.id AS order_item_id, oi.product_id, oi.quantity, oi.unit_price
+            FROM order_items oi
+            WHERE oi.order_id = :order_id
+        """), {"order_id": order_id}).mappings().all()
+        if not items:
+            raise ValueError("Cannot refund an order without line items")
+
+        refund_id = db.execute(text("""
+            INSERT INTO order_refunds (order_id, refunded_by, reason, amount)
+            SELECT :order_id, u.id, :reason, :amount
+            FROM users u
+            WHERE u.username = :username
+            RETURNING id
+        """), {
+            "order_id": order_id,
+            "username": username,
+            "reason": reason[:255],
+            "amount": order["order_total"],
+        }).scalar()
+        if refund_id is None:
+            raise ValueError("Refunding user could not be found")
+
+        for item in items:
+            db.execute(text("""
+                INSERT INTO order_refund_items
+                    (refund_id, order_item_id, quantity, unit_price)
+                VALUES (:refund_id, :order_item_id, :quantity, :unit_price)
+            """), {
+                "refund_id": refund_id,
+                "order_item_id": item["order_item_id"],
+                "quantity": item["quantity"],
+                "unit_price": item["unit_price"],
+            })
+            db.execute(text("""
+                UPDATE products
+                SET stock_quantity = stock_quantity + :quantity
+                WHERE id = :product_id
+            """), {
+                "quantity": item["quantity"],
+                "product_id": item["product_id"],
+            })
+
+        db.execute(
+            text("UPDATE orders SET status = 'REFUNDED' WHERE id = :order_id"),
+            {"order_id": order_id},
+        )
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        return {"error": "Failed to refund order", "details": str(exc)}
+
+    return RedirectResponse(url=f"/orders/{order_id}", status_code=303)
 # -------------------------------------------------------------------------------
 # 1. Define a schema for parsing the incoming multi-item payload
 class OrderItemPayload(BaseModel):
@@ -609,7 +760,7 @@ class OrderItemPayload(BaseModel):
     quantity: int
 # -------------------------------------------------------------------------------
 @app.get('/checkout', response_class=HTMLResponse)
-def view_checkout_wizard(request: Request, username: str = Depends(require_operator), db: Session = Depends(get_db)):
+def view_checkout_wizard(request: Request, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
     # Entity types are stored as IDs and displayed through the lookup table.
     customers = db.execute(text("""
         SELECT e.id, e.name, et.entity as entity_type
@@ -620,11 +771,13 @@ def view_checkout_wizard(request: Request, username: str = Depends(require_opera
     """)).fetchall()
 
     products = db.execute(text("SELECT id, name, price, stock_quantity FROM products WHERE stock_quantity > 0 ORDER BY name ASC")).fetchall()
+    role = db.execute(text("SELECT role FROM users WHERE username = :username"), {"username": username}).scalar()
     
     return templates.TemplateResponse("checkout.html", {
         "request": request,
         "customers": [dict(c._mapping) for c in customers],
-        "products": [dict(p._mapping) for p in products]
+        "products": [dict(p._mapping) for p in products],
+        "role": role
     })
 # -------------------------------------------------------------------------------
 @app.post('/checkout/create')

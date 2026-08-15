@@ -10,6 +10,8 @@
 - Operators can process checkout transactions; viewers have read-only access.
 - SQL identifiers accepted from forms are restricted to explicit allowlists.
 - Inventory updates are atomic during checkout to prevent overselling.
+- Refunds are recorded separately, restore inventory once, and preserve the original order history.
+- Full refunds are available only to administrators and operators; read-only users can review orders.
 - Delete operations use authenticated `POST` requests.
 
 ## Deployment requirements

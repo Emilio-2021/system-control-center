@@ -12,6 +12,8 @@ The FastAPI ERP portfolio application is working locally with:
 - Checkout and order creation
 - Inventory deduction during checkout
 - Order history display
+- Individual order details and full refund processing
+- Dashboard recent-order summary with direct links to order details
 - Dashboard entity summary and navigation
 - Sample product data through `seed_products.py`
 

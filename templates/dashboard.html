@@ -61,6 +61,37 @@
                 </div>
             </div>
         </div>
+
+        <div class="row mt-2">
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Recent Orders</span>
+                        <a href="/orders-view" class="btn btn-sm btn-outline-info">View All Orders</a>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if recent_orders %}
+                        <div class="list-group list-group-flush">
+                            {% for order in recent_orders %}
+                            <a href="/orders/{{ order.order_id }}?back=dashboard" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <span>
+                                    <strong>Order #{{ order.order_id }}</strong>
+                                    <span class="text-muted ms-2">{{ order.customer_name }}</span>
+                                </span>
+                                <span class="text-end">
+                                    <span class="badge bg-secondary text-uppercase">{{ order.status }}</span>
+                                    <span class="ms-3 fw-bold">${{ "{:,.2f}".format(order.order_total | float) }}</span>
+                                </span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted p-3 mb-0">No orders have been created yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>

@@ -22,15 +22,16 @@
         {% else %}
         
         {% for o in orders %}
-        <div class="card shadow-sm mb-4">
+        <div class="card shadow-sm mb-4" id="order-{{ o.order_id }}">
             <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
                 <div>
-                    <h5 class="m-0 text-primary">Invoice Account ID: #{{ o.order_id }}</h5>
+                    <h5 class="m-0 text-primary"><a href="/orders/{{ o.order_id }}?back=orders" class="text-decoration-none">Invoice Account ID: #{{ o.order_id }}</a></h5>
                     <small class="text-muted">Purchased on: {{ o.created_at }}</small>
                 </div>
                 <div class="text-end">
                     <span class="badge bg-secondary p-2 text-uppercase mb-1 d-block">{{ o.status }}</span>
                     <strong>Customer:</strong> {{ o.customer_name }}
+                    <div class="mt-2"><a href="/orders/{{ o.order_id }}?back=orders" class="btn btn-sm btn-outline-primary">View Details</a></div>
                 </div>
             </div>
             <div class="card-body p-0">
