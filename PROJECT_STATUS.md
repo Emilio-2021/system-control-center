@@ -5,6 +5,7 @@
 The FastAPI ERP portfolio application is working locally with:
 
 - Signed, expiring sessions and protected application routes
+- Role-based access control for administrators, operators, and viewers
 - User management with bcrypt passwords
 - `PERSON` and `COMPANY` entity types
 - Inventory product management
@@ -25,17 +26,17 @@ python -m py_compile main.py
 ## Database setup
 
 - Configure `DATABASE_URL` and `SESSION_SECRET` using `.env` or the hosting provider environment.
-- Run `migrations/001_person_company_entities.sql` against an existing database.
-- The migration changes legacy `CLIENT` and `AGENCY` values to `PERSON` and `COMPANY`.
-- Do not run `seed_db.py` against important data; it truncates several tables.
+- The local database is SQLite (`database.db`); the role column is added automatically to an existing local database.
+- `database.db` is intentionally excluded from GitHub because it contains local application data.
+- A prepared SQLite database must be supplied locally before starting the application.
+- Do not run `seed_db.py` against important data; it clears and replaces local users and entities.
 
 ## Portfolio readiness
 
-The project has an initial local Git commit and is ready for further cleanup before publishing to GitHub. Recommended next work:
+The project is suitable as a portfolio demonstration. Recommended next work before production deployment:
 
-1. Add the PostgreSQL schema or a reproducible database setup script.
-2. Add automated tests for authentication, checkout, and inventory changes.
-3. Add screenshots or a short demo GIF to `README.md`.
-4. Add CSRF protection and role-based authorization before production deployment.
-5. Review and remove the older duplicate documentation/template files.
-
+1. Add automated tests for authentication, authorization, checkout, and inventory changes.
+2. Add screenshots or a short demo GIF to `README.md`.
+3. Add CSRF protection before production deployment.
+4. Add rate limiting and account lockout for login attempts.
+5. Review and remove older duplicate documentation/template files.

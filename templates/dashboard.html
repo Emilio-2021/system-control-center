@@ -10,7 +10,7 @@
     <nav class="navbar navbar-dark bg-dark px-3 justify-content-between">
         <a class="navbar-brand" href="#">System Control Center</a>
         <div class="text-white">
-            <span>Welcome, <strong>{{ username }}</strong></span> | 
+            <span>Welcome, <strong>{{ username }}</strong> <span class="badge bg-secondary">{{ role }}</span></span> |
             <a href="/logout" class="btn btn-sm btn-danger ms-2">Logout</a>
         </div>
     </nav>
@@ -52,9 +52,11 @@
                     <div class="card-body d-flex flex-column gap-2 justify-content-center px-4">
                         <a href="/checkout" class="btn btn-primary py-3 fw-bold shadow-sm">🛒 Open Checkout Wizard (New Order)</a>
                         <a href="/orders-view" class="btn btn-outline-info py-2">View Enterprise Order Invoice Streams</a>
-                        <a href="/products-view" class="btn btn-outline-success py-2">View & Manage Inventory Products Catalog</a>
-                        <a href="/entities-view" class="btn btn-outline-primary py-2">View & Edit Business Entities Registry</a>
-                        <a href="/users-view" class="btn btn-outline-dark py-2">View & Edit Users Datagrid</a>
+                        <a href="/products-view" class="btn btn-outline-success py-2">View Inventory Products Catalog</a>
+                        <a href="/entities-view" class="btn btn-outline-primary py-2">View Business Entities Registry</a>
+                        {% if role == 'admin' %}
+                        <a href="/users-view" class="btn btn-outline-dark py-2">Manage Users and Roles</a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

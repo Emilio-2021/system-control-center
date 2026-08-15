@@ -22,7 +22,7 @@
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>Business Entities Registry</h1>
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEntityModal">+ Register Entity</button>
+            {% if role == 'admin' %}<button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEntityModal">+ Register Entity</button>{% endif %}
         </div>
 
         <div class="card shadow-sm mb-5">
@@ -41,7 +41,7 @@
                                 </a>
                             </th>
                             {% endfor %}
-                            <th>Actions</th> 
+                            {% if role == 'admin' %}<th>Actions</th>{% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -59,6 +59,7 @@
                             </td>
                             {% endfor %}
 
+                            {% if role == 'admin' %}
                             <!-- ACTION CELL: Kept completely outside the data loop -->
                             <td>
 								<!-- EDIT BUTTON: Dynamic data loop matching the exact schema definition -->
@@ -73,6 +74,7 @@
 									<button type="submit" class="btn btn-sm btn-danger">Delete</button>
 								</form>
                             </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -86,6 +88,7 @@
         </div>
     </div>
 
+    {% if role == 'admin' %}
     <!-- ADD ENTITY MODAL -->
     <div class="modal fade" id="addEntityModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -143,10 +146,12 @@
 						
 						<!-- Dynamic visible fields loop -->
                         {% for col in columns %}
-                        {% if col != 'id' and col != 'created_at' %}
+                        {% if col != 'id' and col != 'created_at' and col != 'entity_type' %}
                         <div class="mb-3">
-                            <label class="form-label text-capitalize">{{ col }}</label>
-                            <input type="text" class="form-control" name="{{ col }}" id="edit-{{ col }}" required>
+                            <label class="form-label" for="edit-{{ col }}">
+                                {% if col == 'name' %}Company/Legal Name{% elif col == 'email' %}Primary Contact Email{% else %}{{ col | replace('_', ' ') | capitalize }}{% endif %}
+                            </label>
+                            <input type="{% if col == 'email' %}email{% else %}text{% endif %}" class="form-control" name="{{ col }}" id="edit-{{ col }}" required>
                         </div>
                         {% endif %}
                         {% endfor %}
@@ -174,5 +179,6 @@
             });
         });
     </script>
+    {% endif %}
 </body>
 </html>

@@ -17,7 +17,7 @@
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>Product Master Catalog</h1>
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProductModal">+ Add Stock Item</button>
+            {% if role == 'admin' %}<button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProductModal">+ Add Stock Item</button>{% endif %}
         </div>
 
         <div class="card shadow-sm mb-5">
@@ -36,7 +36,7 @@
                                 </a>
                             </th>
                             {% endfor %}
-                            <th>Actions</th>
+                            {% if role == 'admin' %}<th>Actions</th>{% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -46,11 +46,11 @@
                             <td><strong>{{ row.name }}</strong></td>
                             <td><code class="text-dark">{{ row.sku }}</code></td>
                             <td>${{ "{:,.2f}".format(row.price | float) }}</td>
-                            <td>
+                            {% if role == 'admin' %}<td>
                                 <span class="badge {% if row.stock_quantity > 10 %}bg-success{% else %}bg-danger{% endif %}">
                                     {{ row.stock_quantity }} units
                                 </span>
-                            </td>
+                            </td>{% endif %}
                             <td>{{ row.created_at }}</td>
                             <td>
                                 <button class="btn btn-sm btn-warning edit-product-btn" data-bs-toggle="modal" data-bs-target="#editProductModal"
@@ -69,6 +69,7 @@
         </div>
     </div>
 
+    {% if role == 'admin' %}
     <!-- MODAL MARKUP CONFIGURATIONS (Add Product) -->
     <div class="modal fade" id="addProductModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -118,5 +119,6 @@
             });
         });
     </script>
+    {% endif %}
 </body>
 </html>

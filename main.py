@@ -73,6 +73,26 @@ def verify_session_cookie(request: Request, db: Session = Depends(get_db)) -> st
     if not db.execute(text("SELECT 1 FROM users WHERE username = :username"), {"username": username}).scalar():
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
     return username
+
+
+def require_admin(username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)) -> str:
+    role = db.execute(
+        text("SELECT role FROM users WHERE username = :username"),
+        {"username": username},
+    ).scalar()
+    if role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator access required")
+    return username
+
+
+def require_operator(username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)) -> str:
+    role = db.execute(
+        text("SELECT role FROM users WHERE username = :username"),
+        {"username": username},
+    ).scalar()
+    if role not in {"admin", "operator"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Operator access required")
+    return username
 # -------------------------------------------------------------------------------
 # LOGIN ROUTES (First page the user encounters)
 # -------------------------------------------------------------------------------
@@ -114,8 +134,8 @@ async def handle_login(
         )
 
     # 5. Log success action to audit_logs table
-    audit_sql = text("INSERT INTO audit_logs (user_id, action) VALUES (:user_id, :action)")
-    db.execute(audit_sql, {"user_id": result._mapping.get('id'), "action": "LOGIN_SUCCESS"})
+#    audit_sql = text("INSERT INTO audit_logs (user_id, action) VALUES (:user_id, :action)")
+#    db.execute(audit_sql, {"user_id": result._mapping.get('id'), "action": "LOGIN_SUCCESS"})
     db.commit()
 
     # 6. Redirect to dashboard and set a secure session cookie
@@ -142,12 +162,20 @@ def logout():
 @app.get('/dashboard', response_class=HTMLResponse)
 def view_dashboard(request: Request, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
     # Cleaned: Removed the tasks SQL query entirely
-    entities_res = db.execute(text("SELECT entity_type, COUNT(*) as qty FROM entities GROUP BY entity_type")).fetchall()
+    entities_res = db.execute(text("""
+        SELECT et.entity AS entity_type, COUNT(*) AS qty
+        FROM entities e
+        INNER JOIN entity_type et ON e.entity_type = et.id
+        GROUP BY et.id, et.entity
+        ORDER BY et.entity
+    """)).fetchall()
     entities_data = [dict(row._mapping) for row in entities_res]
+    role = db.execute(text("SELECT role FROM users WHERE username = :username"), {"username": username}).scalar()
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "username": username,
-        "entity_breakdown": entities_data
+        "entity_breakdown": entities_data,
+        "role": role
     })
 # Keep your existing '/users-view', '/users/create', etc. below this point...
 #-------------------------------------------------------------------------------
@@ -183,7 +211,7 @@ def generate_html_grid(result) -> str:
     return html
 #-------------------------------------------------------------------------------        
 @app.get('/users', response_class=HTMLResponse)
-def view_users(username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+def view_users(username: str = Depends(require_admin), db: Session = Depends(get_db)):
     sql = text("SELECT id, username, email, created_at FROM users")
     result = db.execute(sql)
     
@@ -207,9 +235,9 @@ def view_users(username: str = Depends(verify_session_cookie), db: Session = Dep
 # SECURED USERS MATRIX VIEW
 #-------------------------------------------------------------------------------   
 @app.get('/users-view', response_class=HTMLResponse)
-def view_users(request: Request, sort_by: str = "id", order: str = "ASC", username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+def view_users(request: Request, sort_by: str = "id", order: str = "ASC", username: str = Depends(require_admin), db: Session = Depends(get_db)):
     # 1. Whitelist inputs to protect against SQL Injection
-    allowed_sort_columns = ["id", "username", "email", "created_at"]
+    allowed_sort_columns = ["id", "username", "email", "role", "created_at"]
     if sort_by not in allowed_sort_columns:
         sort_by = "id"
         
@@ -221,10 +249,10 @@ def view_users(request: Request, sort_by: str = "id", order: str = "ASC", userna
     next_order = "DESC" if order == "ASC" else "ASC"
 
     # 3. Inject safe verified keywords into the ORDER BY clause
-    sql = text(f"SELECT id, username, email, created_at FROM users ORDER BY {sort_by} {order}")
+    sql = text(f"SELECT id, username, email, role, created_at FROM users ORDER BY {sort_by} {order}")
     result = db.execute(sql)
     
-    grid_columns = ["id", "username", "email", "created_at"]
+    grid_columns = ["id", "username", "email", "role", "created_at"]
     raw_keys = result.keys()
     rows = [dict(zip(raw_keys, row)) for row in result.fetchall()]
 
@@ -239,14 +267,19 @@ def view_users(request: Request, sort_by: str = "id", order: str = "ASC", userna
 #-------------------------------------------------------------------------------    
 # NEW ROUTE: Dynamically inserts form data into PostgreSQL
 @app.post('/users/create')
-async def create_user(request: Request, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+async def create_user(request: Request, username: str = Depends(require_admin), db: Session = Depends(get_db)):
     # 1. Grab all fields submitted by the HTML form dynamically
     form_data = await request.form()
     form_dict = dict(form_data)
-    allowed = {"username", "email", "password"}
+    allowed = {"username", "email", "password", "role"}
     if set(form_dict) - allowed:
         return {"error": "Invalid user fields"}
     
+    role = str(form_dict.get("role", "operator")).lower()
+    if role not in {"admin", "operator", "viewer"}:
+        return {"error": "Invalid user role"}
+    form_dict["role"] = role
+
     # 2. Extract plain text password, hash it, and swap keys
     if 'password' in form_dict and form_dict['password']:
         plain_password = form_dict.pop('password')
@@ -275,14 +308,19 @@ async def create_user(request: Request, username: str = Depends(verify_session_c
     return RedirectResponse(url="/users-view", status_code=303)
 #-------------------------------------------------------------------------------    
 @app.post('/users/update')
-async def update_user(request: Request, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+async def update_user(request: Request, username: str = Depends(require_admin), db: Session = Depends(get_db)):
     form_data = await request.form()
     form_dict = dict(form_data)
-    if set(form_dict) - {"id", "username", "email", "password"} or "id" not in form_dict:
+    if set(form_dict) - {"id", "username", "email", "password", "role"} or "id" not in form_dict:
         return {"error": "Invalid user fields"}
     
     # 1. Pull out structural management IDs
     record_id = form_dict.pop('id')
+
+    role = str(form_dict.get("role", "operator")).lower()
+    if role not in {"admin", "operator", "viewer"}:
+        return {"error": "Invalid user role"}
+    form_dict["role"] = role
     
     # 2. Check if a new password was provided in the edit modal form
     if 'password' in form_dict:
@@ -310,7 +348,7 @@ async def update_user(request: Request, username: str = Depends(verify_session_c
     return RedirectResponse(url="/users-view", status_code=303)
 #-------------------------------------------------------------------------------    
 @app.post('/users/delete/{user_id}')
-def delete_user(user_id: int, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+def delete_user(user_id: int, username: str = Depends(require_admin), db: Session = Depends(get_db)):
     sql_query = text("DELETE FROM users WHERE id = :user_id")
     try:
         db.execute(sql_query, {"user_id": user_id})
@@ -330,16 +368,26 @@ def view_entities(request: Request, sort_by: str = "id", order: str = "ASC", use
     if sort_by not in allowed_sort_columns:
         sort_by = "id"
         
+    if sort_by == "id":
+        sort_by = "e.id"
+
     order = "DESC" if order.upper() == "DESC" else "ASC"
     next_order = "DESC" if order == "ASC" else "ASC"
 
     # 2. Query and clean columns array
-    sql = text(f"SELECT id, entity_type, name, email, created_at FROM entities ORDER BY {sort_by} {order}")
+#    sql = text(f"SELECT id, entity_type, name, email, created_at FROM entities ORDER BY {sort_by} {order}")
+    sql = text(f"SELECT e.id, et.entity as entity_type, e.name, e.email, e.created_at FROM entities e INNER JOIN entity_type et ON e.entity_type = et.id ORDER BY {sort_by} {order}")
+
     result = db.execute(sql)
-    
+
     grid_columns = ["id", "entity_type", "name", "email", "created_at"]
     raw_keys = result.keys()
     rows = [dict(zip(raw_keys, row)) for row in result.fetchall()]
+
+    if sort_by == "e.id":
+        sort_by = "id"
+
+    role = db.execute(text("SELECT role FROM users WHERE username = :username"), {"username": username}).scalar()
 
     return templates.TemplateResponse("entities.html", {
         "request": request,
@@ -347,21 +395,29 @@ def view_entities(request: Request, sort_by: str = "id", order: str = "ASC", use
         "rows": rows,
         "current_sort": sort_by,
         "current_order": order,
-        "next_order": next_order
+        "next_order": next_order,
+        "role": role
     })
 #-------------------------------------------------------------------------------    
 @app.post('/entities/create')
-async def create_entity(request: Request, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+async def create_entity(request: Request, username: str = Depends(require_admin), db: Session = Depends(get_db)):
     form_data = await request.form()
     form_dict = dict(form_data)
     if set(form_dict) - {"entity_type", "name", "email"}:
         return {"error": "Invalid entity fields"}
     
     # Enforce uppercase types matching check constraint
-    if 'entity_type' in form_dict:
-        form_dict['entity_type'] = form_dict['entity_type'].upper()
-    if form_dict.get('entity_type') not in {'PERSON', 'COMPANY'}:
+    entity_type = str(form_dict.get('entity_type', '')).upper()
+    if entity_type not in {'PERSON', 'COMPANY'}:
         return {"error": "Invalid entity type"}
+
+    entity_type_id = db.execute(
+        text("SELECT id FROM entity_type WHERE UPPER(entity) = :entity_type"),
+        {"entity_type": entity_type},
+    ).scalar()
+    if entity_type_id is None:
+        return {"error": "Invalid entity type"}
+    form_dict['entity_type'] = entity_type_id
 
     columns = list(form_dict.keys())
     placeholders = ", ".join([f":{col}" for col in columns])
@@ -378,17 +434,24 @@ async def create_entity(request: Request, username: str = Depends(verify_session
     return RedirectResponse(url="/entities-view", status_code=303)
 #-------------------------------------------------------------------------------    
 @app.post('/entities/update')
-async def update_entity(request: Request, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+async def update_entity(request: Request, username: str = Depends(require_admin), db: Session = Depends(get_db)):
     form_data = await request.form()
     form_dict = dict(form_data)
     if set(form_dict) - {"id", "entity_type", "name", "email"} or "id" not in form_dict:
         return {"error": "Invalid entity fields"}
     
     record_id = form_dict.pop('id')
-    if 'entity_type' in form_dict:
-        form_dict['entity_type'] = form_dict['entity_type'].upper()
-    if form_dict.get('entity_type') not in {'PERSON', 'COMPANY'}:
+    entity_type = str(form_dict.get('entity_type', '')).upper()
+    if entity_type not in {'PERSON', 'COMPANY'}:
         return {"error": "Invalid entity type"}
+
+    entity_type_id = db.execute(
+        text("SELECT id FROM entity_type WHERE UPPER(entity) = :entity_type"),
+        {"entity_type": entity_type},
+    ).scalar()
+    if entity_type_id is None:
+        return {"error": "Invalid entity type"}
+    form_dict['entity_type'] = entity_type_id
 
     if not form_dict:
         return {"error": "No changes submitted"}
@@ -406,7 +469,7 @@ async def update_entity(request: Request, username: str = Depends(verify_session
     return RedirectResponse(url="/entities-view", status_code=303)
 #-------------------------------------------------------------------------------    
 @app.post('/entities/delete/{entity_id}')
-def delete_entity(entity_id: int, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+def delete_entity(entity_id: int, username: str = Depends(require_admin), db: Session = Depends(get_db)):
     sql_query = text("DELETE FROM entities WHERE id = :entity_id")
     try:
         db.execute(sql_query, {"entity_id": entity_id})
@@ -433,17 +496,20 @@ def view_products(request: Request, sort_by: str = "id", order: str = "ASC", use
     grid_columns = ["id", "name", "sku", "price", "stock_quantity", "created_at"]
     rows = [dict(zip(result.keys(), row)) for row in result.fetchall()]
 
+    role = db.execute(text("SELECT role FROM users WHERE username = :username"), {"username": username}).scalar()
+
     return templates.TemplateResponse("products.html", {
         "request": request,
         "columns": grid_columns,
         "rows": rows,
         "current_sort": sort_by,
         "current_order": order,
-        "next_order": next_order
+        "next_order": next_order,
+        "role": role
     })
 # -------------------------------------------------------------------------------
 @app.post('/products/create')
-async def create_product(request: Request, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+async def create_product(request: Request, username: str = Depends(require_admin), db: Session = Depends(get_db)):
     form_data = await request.form()
     form_dict = dict(form_data)
     if set(form_dict) - {"name", "sku", "price", "stock_quantity"}:
@@ -469,7 +535,7 @@ async def create_product(request: Request, username: str = Depends(verify_sessio
     return RedirectResponse(url="/products-view", status_code=303)
 # -------------------------------------------------------------------------------
 @app.post('/products/update')
-async def update_product(request: Request, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+async def update_product(request: Request, username: str = Depends(require_admin), db: Session = Depends(get_db)):
     form_data = await request.form()
     form_dict = dict(form_data)
     if set(form_dict) - {"id", "name", "sku", "price", "stock_quantity"} or "id" not in form_dict:
@@ -497,7 +563,7 @@ async def update_product(request: Request, username: str = Depends(verify_sessio
     return RedirectResponse(url="/products-view", status_code=303)
 # -------------------------------------------------------------------------------
 @app.post('/products/delete/{product_id}')
-def delete_product(product_id: int, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+def delete_product(product_id: int, username: str = Depends(require_admin), db: Session = Depends(get_db)):
     try:
         db.execute(text("DELETE FROM products WHERE id = :product_id"), {"product_id": product_id})
         db.commit()
@@ -543,9 +609,16 @@ class OrderItemPayload(BaseModel):
     quantity: int
 # -------------------------------------------------------------------------------
 @app.get('/checkout', response_class=HTMLResponse)
-def view_checkout_wizard(request: Request, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
-    # FIXED: Explicitly force UPPERCASE string evaluation matching your data entries
-    customers = db.execute(text("SELECT id, name, entity_type FROM entities WHERE entity_type IN ('PERSON', 'COMPANY') ORDER BY name ASC")).fetchall()
+def view_checkout_wizard(request: Request, username: str = Depends(require_operator), db: Session = Depends(get_db)):
+    # Entity types are stored as IDs and displayed through the lookup table.
+    customers = db.execute(text("""
+        SELECT e.id, e.name, et.entity as entity_type
+        FROM entities e
+        INNER JOIN entity_type et ON e.entity_type = et.id
+        WHERE UPPER(et.entity) IN ('PERSON', 'COMPANY')
+        ORDER BY e.name ASC
+    """)).fetchall()
+
     products = db.execute(text("SELECT id, name, price, stock_quantity FROM products WHERE stock_quantity > 0 ORDER BY name ASC")).fetchall()
     
     return templates.TemplateResponse("checkout.html", {
@@ -555,7 +628,7 @@ def view_checkout_wizard(request: Request, username: str = Depends(verify_sessio
     })
 # -------------------------------------------------------------------------------
 @app.post('/checkout/create')
-async def process_checkout_invoice(request: Request, username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
+async def process_checkout_invoice(request: Request, username: str = Depends(require_operator), db: Session = Depends(get_db)):
     form_data = await request.form()
     
     # 2. Extract structural parameters out of the form payload
@@ -573,6 +646,15 @@ async def process_checkout_invoice(request: Request, username: str = Depends(ver
 
     try:
         # 3. Open a secure transaction block context
+        customer_exists = db.execute(text("""
+            SELECT 1
+            FROM entities e
+            INNER JOIN entity_type et ON e.entity_type = et.id
+            WHERE e.id = :id AND UPPER(et.entity) IN ('PERSON', 'COMPANY')
+        """), {"id": entity_id}).scalar()
+        if not customer_exists:
+            raise ValueError("Selected entity is not a valid customer")
+
         # Header Step: Create the parent Order record wrapper
         order_sql = text("""
             INSERT INTO orders (entity_id, status) 
@@ -582,22 +664,15 @@ async def process_checkout_invoice(request: Request, username: str = Depends(ver
         order_id = db.execute(order_sql, {"entity_id": entity_id}).scalar()
 
         # 4. Loop through selected elements to generate Line Item records
-        customer_exists = db.execute(
-            text("SELECT 1 FROM entities WHERE id = :id AND entity_type IN ('PERSON', 'COMPANY')"),
-            {"id": entity_id},
-        ).scalar()
-        if not customer_exists:
-            raise ValueError("Selected entity is not a valid customer")
-
         for pid, qty in zip(product_ids, quantities):
             product_id = int(pid)
             quantity = int(qty)
             if quantity <= 0:
                 raise ValueError("Quantity must be greater than zero")
 
-            # Look up current product parameters (Price and Inventory)
+            # Read the product and price snapshot for the order line.
             prod_data = db.execute(
-                text("SELECT price, stock_quantity, name FROM products WHERE id = :id FOR UPDATE"), 
+                text("SELECT price, stock_quantity, name FROM products WHERE id = :id"),
                 {"id": product_id}
             ).fetchone()
             
@@ -623,13 +698,16 @@ async def process_checkout_invoice(request: Request, username: str = Depends(ver
                 "unit_price": unit_price
             })
 
-            # Step B: Deduct product inventory stock quantity counts immediately
+            # Step B: Deduct inventory atomically. This is safe under concurrent
+            # checkouts on both PostgreSQL and SQLite.
             stock_update_sql = text("""
                 UPDATE products 
                 SET stock_quantity = stock_quantity - :qty 
-                WHERE id = :id
+                WHERE id = :id AND stock_quantity >= :qty
             """)
-            db.execute(stock_update_sql, {"qty": quantity, "id": product_id})
+            updated = db.execute(stock_update_sql, {"qty": quantity, "id": product_id})
+            if updated.rowcount != 1:
+                raise Exception(f"Insufficient stock for item '{prod_mapped.get('name')}'. Available stock changed before checkout.")
 
         # 5. Lock changes down permanently to Postgres disk storage engine
         db.commit()

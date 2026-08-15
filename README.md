@@ -11,12 +11,13 @@ User browser
 FastAPI application (Python)
      │
      ▼
-PostgreSQL database
+     SQLite database
 ```
 
 ## Features
 
 - Signed, expiring user sessions
+- Role-based access control for administrators, operators, and viewers
 - User management with bcrypt password hashing
 - Person and company customer registry
 - Product catalog and inventory tracking
@@ -29,7 +30,7 @@ PostgreSQL database
 - Python 3.11+
 - FastAPI
 - Jinja2 templates
-- PostgreSQL
+- SQLite
 - SQLAlchemy
 - bcrypt
 - Bootstrap
@@ -44,7 +45,7 @@ PostgreSQL database
    pip install -r requirements.txt
    ```
 
-3. Copy `.env.example` to `.env` and set `DATABASE_URL` and a long random `SESSION_SECRET`.
+3. Set a long random `SESSION_SECRET` in your environment. The default local database is `database.db`.
 
 4. Start the application:
 
@@ -56,7 +57,9 @@ Open `http://127.0.0.1:8000` in a browser.
 
 ## Database
 
-The application expects the PostgreSQL tables used by `main.py` to already exist. `seed_db.py` can populate test users and entities after the schema has been created:
+The application uses the local SQLite database `database.db`. `seed_db.py` can populate test users and entities after the schema has been created:
+
+The database file is intentionally ignored by Git because it contains local data. A prepared `database.db` must exist locally before running the application.
 
 ```powershell
 python seed_db.py
@@ -82,7 +85,7 @@ Products are matched by SKU, so running the script again refreshes the sample pr
 Configuration is read from environment variables:
 
 ```text
-DATABASE_URL=postgresql://user:password@localhost:5432/database
+DATABASE_URL=sqlite:///database.db
 SESSION_SECRET=replace-with-a-long-random-secret
 ENVIRONMENT=development
 ```
@@ -100,3 +103,9 @@ Never commit `.env` or production credentials to source control.
 | `/products-view` | Inventory management |
 | `/checkout` | Create an order |
 | `/orders-view` | View order history |
+
+## Roles
+
+- `admin`: manage users, entities, products, and orders
+- `operator`: view business data and create checkout orders
+- `viewer`: read-only access to dashboards and business data

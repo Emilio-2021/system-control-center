@@ -87,13 +87,22 @@
                     <div class="modal-body">
                         <!-- Dynamic visible fields loop -->
                         {% for col in columns %}
-                        {% if col != 'id' and col != 'created_at' and col != 'password_hash' %}
+                        {% if col != 'id' and col != 'created_at' and col != 'password_hash' and col != 'role' %}
                         <div class="mb-3">
                             <label class="form-label text-capitalize">{{ col }}</label>
                             <input type="text" class="form-control" name="{{ col }}" required>
                         </div>
                         {% endif %}
                         {% endfor %}
+
+                        <div class="mb-3">
+                            <label class="form-label" for="user-role">Access Role</label>
+                            <select class="form-select" name="role" id="user-role" required>
+                                <option value="operator">Operator</option>
+                                <option value="admin">Administrator</option>
+                                <option value="viewer">Viewer</option>
+                            </select>
+                        </div>
                         
                         <!-- Explicit Password Field Input Wrapper -->
                         <div class="mb-3">
@@ -125,13 +134,22 @@
                         
                         <!-- Dynamic visible fields loop -->
                         {% for col in columns %}
-                        {% if col != 'id' and col != 'created_at' and col != 'password_hash' %}
+                        {% if col != 'id' and col != 'created_at' and col != 'password_hash' and col != 'role' %}
                         <div class="mb-3">
                             <label class="form-label text-capitalize">{{ col }}</label>
                             <input type="text" class="form-control" name="{{ col }}" id="edit-{{ col }}" required>
                         </div>
                         {% endif %}
                         {% endfor %}
+
+                        <div class="mb-3">
+                            <label class="form-label" for="edit-role">Access Role</label>
+                            <select class="form-select" name="role" id="edit-role" required>
+                                <option value="operator">Operator</option>
+                                <option value="admin">Administrator</option>
+                                <option value="viewer">Viewer</option>
+                            </select>
+                        </div>
                         
                         <!-- Optional Password Reset Overwrite Box -->
                         <div class="mb-3">
@@ -160,10 +178,11 @@
                 
                 // Populate the rest of the dynamic fields
                 {% for col in columns %}
-                {% if col != 'id' and col != 'created_at' and col != 'password_hash' %}
+                {% if col != 'id' and col != 'created_at' and col != 'password_hash' and col != 'role' %}
                 document.getElementById('edit-{{ col }}').value = this.getAttribute('data-{{ col }}');
                 {% endif %}
                 {% endfor %}
+                document.getElementById('edit-role').value = this.getAttribute('data-role');
             });
         });
     </script>
