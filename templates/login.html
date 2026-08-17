@@ -3,53 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - System Platform</title>
+    <meta name="theme-color" content="#172033">
+    <title>Sign in - System Control Center</title>
     <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --scc-ink: #172033;
+            --scc-blue: #2563eb;
+            --scc-blue-dark: #1d4ed8;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #f4f7fb;
+            color: var(--scc-ink);
+        }
+
+        .app-header {
+            background: var(--scc-ink);
+            min-height: 64px;
+        }
+
+        .brand-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            background: var(--scc-blue);
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+        }
+
+        .login-shell {
+            min-height: calc(100vh - 64px);
+            padding: 3.5rem 1rem;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 430px;
+            border: 0;
+            border-radius: 16px;
+            box-shadow: 0 16px 45px rgba(23, 32, 51, 0.12);
+        }
+
+        .form-control {
+            min-height: 48px;
+            border-color: #d8e0ec;
+        }
+
+        .form-control:focus {
+            border-color: var(--scc-blue);
+            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+        }
+
+        .btn-primary {
+            background: var(--scc-blue);
+            border-color: var(--scc-blue);
+            min-height: 48px;
+        }
+
+        .btn-primary:hover,
+        .btn-primary:focus {
+            background: var(--scc-blue-dark);
+            border-color: var(--scc-blue-dark);
+        }
+
+        .password-wrap .btn {
+            border-color: #d8e0ec;
+            color: #526174;
+        }
+
+        @media (max-width: 575.98px) {
+            .login-shell { padding-top: 2rem; }
+            .login-card { box-shadow: none; }
+        }
+    </style>
 </head>
-<body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
-    <div class="card shadow p-4" style="width: 400px;">
-        <h3 class="text-center mb-4">Account Login</h3>
-        
-        <!-- DYNAMIC ALERTS WRAPPER PANEL CONTEXT -->
-        <!-- Backend flash error template logic wrapper -->
-        {% if error %}
-        <div class="alert alert-danger" role="alert">{{ error }}</div>
-        {% endif %}
+<body>
+    <header class="app-header d-flex align-items-center px-3 px-md-4">
+        <a class="d-flex align-items-center gap-2 text-white text-decoration-none" href="/" aria-label="System Control Center home">
+            <span class="brand-mark" aria-hidden="true">SC</span>
+            <span class="fw-semibold">System Control Center</span>
+        </a>
+    </header>
 
-        <!-- JavaScript URL query string error injection container -->
-        <div id="url-error-alert" class="alert alert-danger d-none" role="alert"></div>
+    <main class="login-shell d-flex align-items-center justify-content-center">
+        <section class="card login-card" aria-labelledby="login-title">
+            <div class="card-body p-4 p-md-5">
+                <div class="mb-4">
+                    <p class="text-uppercase text-primary fw-semibold small mb-2">Secure workspace access</p>
+                    <h1 id="login-title" class="h3 mb-2">Welcome back</h1>
+                    <p class="text-muted mb-0">Sign in to manage your operations and workspace data.</p>
+                </div>
 
-        <form action="/login" method="POST">
-            <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" id="username" name="username" required>
+                {% if error %}
+                <div class="alert alert-danger" role="alert">{{ error }}</div>
+                {% endif %}
+
+                <div id="url-error-alert" class="alert alert-danger d-none" role="alert"></div>
+
+                <form action="/login" method="POST" id="login-form">
+                    <div class="mb-3">
+                        <label for="username" class="form-label fw-semibold">Username</label>
+                        <input type="text" class="form-control" id="username" name="username"
+                               autocomplete="username" autocapitalize="none" spellcheck="false"
+                               autofocus required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label fw-semibold">Password</label>
+                        <div class="input-group password-wrap">
+                            <input type="password" class="form-control" id="password" name="password"
+                                   autocomplete="current-password" required>
+                            <button type="button" class="btn btn-outline-secondary" id="toggle-password"
+                                    aria-label="Show password" aria-pressed="false">Show</button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 fw-semibold" id="submit-button">Sign in</button>
+                </form>
             </div>
-            <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" name="password" required>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Sign In</button>
-        </form>
-    </div>
+        </section>
+    </main>
 
-    <!-- URL QUERY EXTRACTOR JAVASCRIPT BLOCK ENGINE -->
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            // 1. Parse the window browser location search parameters matrix
-            const urlParams = new URLSearchParams(window.location.search);
-            const errorMessage = urlParams.get('error');
+        const password = document.getElementById('password');
+        const togglePassword = document.getElementById('toggle-password');
+        const loginForm = document.getElementById('login-form');
+        const submitButton = document.getElementById('submit-button');
 
-            // 2. If an error keyword is located, strip danger tags and display it 
-            if (errorMessage) {
-                const alertContainer = document.getElementById('url-error-alert');
-                
-                // Set the text content safely to block cross-site scripting vulnerabilities
-                alertContainer.textContent = errorMessage;
-                
-                // Remove the bootstrap hidden layer utility class to show the box
-                alertContainer.classList.remove('d-none');
-            }
+        togglePassword.addEventListener('click', function () {
+            const isPassword = password.type === 'password';
+            password.type = isPassword ? 'text' : 'password';
+            togglePassword.textContent = isPassword ? 'Hide' : 'Show';
+            togglePassword.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+            togglePassword.setAttribute('aria-pressed', String(isPassword));
         });
+
+        loginForm.addEventListener('submit', function () {
+            submitButton.disabled = true;
+            submitButton.textContent = 'Signing in…';
+        });
+
+        const errorMessage = new URLSearchParams(window.location.search).get('error');
+        if (errorMessage) {
+            const alertContainer = document.getElementById('url-error-alert');
+            alertContainer.textContent = errorMessage;
+            alertContainer.classList.remove('d-none');
+        }
     </script>
 </body>
 </html>

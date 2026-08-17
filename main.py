@@ -192,60 +192,6 @@ def view_dashboard(request: Request, username: str = Depends(verify_session_cook
         "recent_orders": recent_orders,
         "role": role
     })
-# Keep your existing '/users-view', '/users/create', etc. below this point...
-#-------------------------------------------------------------------------------
-@app.get('/items')
-def get_items(username: str = Depends(verify_session_cookie), db: Session = Depends(get_db)):
-    try:
-        db.execute(text("SELECT 1"))
-        return {"status": "Connected to Database"}
-    except Exception as e:
-        return {"status": "Database Connection Failed", "error": str(e)} 
-#-------------------------------------------------------------------------------
-def generate_html_grid(result) -> str:
-    # 1. Fetch column headers automatically from the SQL result context
-    columns = result.keys()
-    
-    html = "<style>table, th, td { border: 1px solid black; border-collapse: collapse; padding: 8px; }</style>"
-    html += "<table>\n<thead>\n<tr>"
-    for col in columns:
-        html += f"<th>{col}</th>"
-    html += "</tr>\n</thead>\n<tbody>\n"
-    
-    # 2. Fetch all database rows and loop through them dynamically
-    rows = result.fetchall()
-    for row in rows:
-        html += "<tr>"
-        for value in row:
-            # Handle null/None database values gracefully
-            val_str = str(value) if value is not None else ""
-            html += f"<td>{val_str}</td>"
-        html += "</tr>\n"
-        
-    html += "</tbody>\n</table>"
-    return html
-#-------------------------------------------------------------------------------        
-@app.get('/users', response_class=HTMLResponse)
-def view_users(username: str = Depends(require_admin), db: Session = Depends(get_db)):
-    sql = text("SELECT id, username, email, created_at FROM users")
-    result = db.execute(sql)
-    
-    if result.rowcount == 0:
-        return """
-        <html><body><h1>Database Record View</h1><p>No Data</p></body></html>
-        """
-
-    grid_html = generate_html_grid(result)
-    
-    return f"""
-    <html>
-    <body>
-        <h1>Database Record View</h1>
-        <p>Displaying data from DBGrid context...</p>
-        {grid_html}
-    </body>
-    </html>
-    """        
 # -------------------------------------------------------------------------------
 # SECURED USERS MATRIX VIEW
 #-------------------------------------------------------------------------------   
@@ -617,8 +563,7 @@ def view_orders(request: Request, username: str = Depends(verify_session_cookie)
         "orders": orders_list,
         "items": items_list
     })
-
-
+# -------------------------------------------------------------------------------
 @app.get('/orders/{order_id}', response_class=HTMLResponse)
 def view_order_detail(
     order_id: int,
@@ -667,8 +612,7 @@ def view_order_detail(
         "back_url": "/orders-view" if back == "orders" else "/dashboard",
         "back_label": "Back to Orders" if back == "orders" else "Back to Dashboard",
     })
-
-
+# -------------------------------------------------------------------------------
 @app.post('/orders/{order_id}/refund')
 async def refund_order(
     order_id: int,

@@ -2,11 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
-	<link href="/static/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - System Control Center</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .dashboard-heading { max-width: 720px; }
+        .entity-summary { font-size: .95rem; }
+        .management-card { border: 0; }
+        .management-link {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 92px;
+            text-align: left;
+            text-decoration: none;
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .management-link:hover,
+        .management-link:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 .35rem .8rem rgba(0, 0, 0, .1);
+        }
+        .management-link .link-title { font-weight: 600; }
+        .management-link .link-description { font-size: .82rem; opacity: .8; }
+    </style>
 </head>
 <body class="bg-light">
-    <!-- Navbar Navigation Layout Anchor -->
     <nav class="navbar navbar-dark bg-dark px-3 justify-content-between">
         <a class="navbar-brand" href="#">System Control Center</a>
         <div class="text-white">
@@ -17,47 +38,61 @@
 
     <div class="container mt-5">
         <div class="row mb-4">
-            <div class="col">
+            <div class="col dashboard-heading">
                 <h2>Application Dashboard Matrix</h2>
                 <p class="text-muted">Real-time status overview of system data components.</p>
+                <div class="entity-summary text-muted">
+                    <span class="fw-semibold text-dark">Registered entities:</span>
+                    {% if entity_breakdown %}
+                        {% for item in entity_breakdown %}
+                            <span class="ms-2">{{ item.entity_type }} <span class="badge bg-primary rounded-pill">{{ item.qty }}</span></span>{% if not loop.last %}<span class="text-secondary"> · </span>{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        none yet
+                    {% endif %}
+                </div>
             </div>
         </div>
 
-        <div class="row">
-            <!-- Entities Breakdown Summary Layout Block Component -->
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white fw-bold">Registered Entities Counter</div>
-                    <div class="card-body">
-                        {% if entity_breakdown %}
-                        <ul class="list-group list-group-flush">
-                            {% for item in entity_breakdown %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ item.entity_type }}
-                                <span class="badge bg-primary rounded-pill">{{ item.qty }}</span>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <p class="text-muted">No entities registered.</p>
-                        {% endif %}
-                    </div>
+        <div class="card management-card shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="mb-3">
+                    <h3 class="h5 mb-1">System management</h3>
+                    <p class="text-muted mb-0">Open a workspace to view or update your records.</p>
                 </div>
-            </div>
-
-            <!-- Navigation Panel Layout Options Context Component -->
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white fw-bold">System Management Navigation Links</div>
-                    <div class="card-body d-flex flex-column gap-2 justify-content-center px-4">
-                        <a href="/checkout" class="btn btn-primary py-3 fw-bold shadow-sm">🛒 Open Checkout Wizard (New Order)</a>
-                        <a href="/orders-view" class="btn btn-outline-info py-2">View Enterprise Order Invoice Streams</a>
-                        <a href="/products-view" class="btn btn-outline-success py-2">View Inventory Products Catalog</a>
-                        <a href="/entities-view" class="btn btn-outline-primary py-2">View Business Entities Registry</a>
-                        {% if role == 'admin' %}
-                        <a href="/users-view" class="btn btn-outline-dark py-2">Manage Users and Roles</a>
-                        {% endif %}
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-4">
+                        <a href="/checkout" class="management-link btn btn-primary h-100 px-3 shadow-sm">
+                            <span class="link-title">New order</span>
+                            <span class="link-description">Start a checkout transaction</span>
+                        </a>
                     </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <a href="/orders-view" class="management-link btn btn-outline-info h-100 px-3">
+                            <span class="link-title">Orders</span>
+                            <span class="link-description">Review transactions and invoices</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <a href="/products-view" class="management-link btn btn-outline-success h-100 px-3">
+                            <span class="link-title">Products</span>
+                            <span class="link-description">Manage inventory and stock</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <a href="/entities-view" class="management-link btn btn-outline-primary h-100 px-3">
+                            <span class="link-title">Entities</span>
+                            <span class="link-description">View business and customer records</span>
+                        </a>
+                    </div>
+                    {% if role == 'admin' %}
+                    <div class="col-sm-6 col-lg-4">
+                        <a href="/users-view" class="management-link btn btn-outline-dark h-100 px-3">
+                            <span class="link-title">Users and roles</span>
+                            <span class="link-description">Manage account access</span>
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
