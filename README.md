@@ -26,6 +26,7 @@ FastAPI application (Python)
 - Individual order details and transactional full refunds
 - Dashboard recent-order links with contextual navigation back to the originating page
 - Dashboard metrics
+- Centralized database operation logging for support diagnostics
 
 ## Technology stack
 
@@ -81,6 +82,12 @@ python seed_products.py
 ```
 
 Products are matched by SKU, so running the script again refreshes the sample product records.
+
+## Support logging
+
+Database activity is written to `logs/log.txt` when the application or a database utility starts. Each entry includes the timestamp, operation type, duration, row count, SQL statement, and any database error. SQLAlchemy bound parameter values are intentionally excluded so passwords and submitted form values are not recorded.
+
+The log rotates after 5 MB and keeps up to three backup files. The `logs/` directory is created automatically, and log files are excluded from Git because they may contain operational details.
 
 ## Configuration
 

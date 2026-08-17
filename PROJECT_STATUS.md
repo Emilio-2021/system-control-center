@@ -15,6 +15,7 @@ The FastAPI ERP portfolio application is working locally with:
 - Individual order details and full refund processing
 - Dashboard recent-order summary with direct links to order details
 - Dashboard entity summary and navigation
+- Centralized rotating database support log at `logs/log.txt`
 - Sample product data through `seed_products.py`
 
 ## Useful commands
@@ -23,6 +24,7 @@ The FastAPI ERP portfolio application is working locally with:
 uvicorn main:app --reload
 python seed_products.py
 python -m py_compile main.py
+Get-Content logs\log.txt -Tail 50
 ```
 
 ## Database setup
@@ -32,6 +34,7 @@ python -m py_compile main.py
 - `database.db` is intentionally excluded from GitHub because it contains local application data.
 - A prepared SQLite database must be supplied locally before starting the application.
 - Do not run `seed_db.py` against important data; it clears and replaces local users and entities.
+- Database operations are recorded in `logs/log.txt`; bound parameter values are excluded from those entries.
 
 ## Portfolio readiness
 

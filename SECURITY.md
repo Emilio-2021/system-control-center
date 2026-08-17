@@ -13,12 +13,14 @@
 - Refunds are recorded separately, restore inventory once, and preserve the original order history.
 - Full refunds are available only to administrators and operators; read-only users can review orders.
 - Delete operations use authenticated `POST` requests.
+- Database support logging excludes SQLAlchemy bound parameter values to reduce the risk of recording passwords or submitted form data.
 
 ## Deployment requirements
 
 - Set a long, random `SESSION_SECRET` in production.
 - Set `ENVIRONMENT=production` so cookies use the `Secure` flag.
 - Protect the local SQLite database file with appropriate filesystem permissions.
+- Protect `logs/log.txt` with appropriate filesystem permissions because SQL statements and operational diagnostics may still reveal application structure.
 - Store secrets in the hosting provider's environment configuration.
 - Do not commit `.env`, database URLs, or seed credentials.
 - Replace the development seed passwords before deployment.
