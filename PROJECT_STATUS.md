@@ -13,6 +13,7 @@ The FastAPI ERP portfolio application is working locally with:
 - Inventory deduction during checkout
 - Order history display
 - Individual order details and full refund processing
+- Refund workflow with refund reason, inventory restoration, and `REFUNDED` order status
 - Dashboard recent-order summary with direct links to order details
 - Dashboard entity summary and navigation
 - Centralized rotating database support log at `logs/log.txt`
@@ -32,6 +33,7 @@ Get-Content logs\log.txt -Tail 50
 - `database.db` is intentionally excluded from GitHub because it contains local application data.
 - A prepared SQLite database must be supplied locally before starting the application.
 - Database operations are recorded in `logs/log.txt`; bound parameter values are excluded from those entries.
+- Refunds are initiated from an order detail page and are restricted to administrators and operators.
 
 ## Portfolio readiness
 

@@ -28,6 +28,8 @@ FastAPI application (Python)
 - Dashboard metrics
 - Centralized database operation logging for support diagnostics
 
+The refund workflow is available from a completed order's detail page. Administrators and operators can issue one full refund with a reason; the system records the refund, restores the ordered inventory, and marks the order as `REFUNDED`. Viewer accounts can review refund details but cannot issue refunds.
+
 ## Technology stack
 
 - Python 3.11+
@@ -94,6 +96,7 @@ Never commit `.env` or production credentials to source control.
 | `/checkout` | Create an order |
 | `/orders-view` | View order history |
 | `/orders/{order_id}` | View an individual order and process a full refund |
+| `POST /orders/{order_id}/refund` | Record a full refund, restore inventory, and mark the order refunded |
 
 ## Roles
 
