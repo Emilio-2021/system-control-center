@@ -103,3 +103,21 @@ Never commit `.env` or production credentials to source control.
 - `admin`: manage users, entities, products, and orders
 - `operator`: view business data and create checkout orders
 - `viewer`: read-only access to dashboards and business data
+
+## Screenshots
+
+Application screen captures are stored in the [`res/`](res/) folder:
+
+![Login screen](res/login.PNG)
+
+![Dashboard](res/dashboard.png)
+
+![Business entities registry](res/BusinessEntitiesRegistry.png)
+
+![Product master catalog](res/ProductMasterCatalog.png)
+
+![Orders view](res/OrdersView.png)
+
+![Order invoice line items](res/OrdersInvoicedLineItems.png)
+
+![Create new sales order invoice](res/CreateNewSalesOrderInvoice.png)
