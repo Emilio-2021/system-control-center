@@ -7,3 +7,7 @@ database.db
 migrations/
 logs/*.txt
 !logs/.gitkeep
+seed_db.py
+seed_products.py
+hashpass.py
+details.txt

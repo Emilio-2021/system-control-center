@@ -60,28 +60,9 @@ Open `http://127.0.0.1:8000` in a browser.
 
 ## Database
 
-The application uses the local SQLite database `database.db`. `seed_db.py` can populate test users and entities after the schema has been created:
+The application uses the local SQLite database `database.db`. The database file is intentionally ignored by Git because it contains local application data, user password hashes, and business records. A prepared database must exist locally before starting the application.
 
-The database file is intentionally ignored by Git because it contains local data. A prepared `database.db` must exist locally before running the application.
-
-```powershell
-python seed_db.py
-```
-
-The seed script creates these test accounts:
-
-- `admin` / `admin123`
-- `manager` / `manager123`
-
-Do not use these credentials in production.
-
-To add sample inventory without resetting existing data, run:
-
-```powershell
-python seed_products.py
-```
-
-Products are matched by SKU, so running the script again refreshes the sample product records.
+Create administrator and other application users with secure, unique passwords before deployment. Do not commit database files or credentials to source control.
 
 ## Support logging
 

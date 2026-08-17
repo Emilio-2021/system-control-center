@@ -22,8 +22,8 @@
 - Protect the local SQLite database file with appropriate filesystem permissions.
 - Protect `logs/log.txt` with appropriate filesystem permissions because SQL statements and operational diagnostics may still reveal application structure.
 - Store secrets in the hosting provider's environment configuration.
-- Do not commit `.env`, database URLs, or seed credentials.
-- Replace the development seed passwords before deployment.
+- Do not commit `.env`, database URLs, database files, or credentials.
+- Create production users with secure, unique passwords before deployment.
 
 ## Remaining production hardening
 
