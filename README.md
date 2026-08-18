@@ -72,6 +72,17 @@ Database activity is written to `logs/log.txt` when the application or a databas
 
 The log rotates after 5 MB and keeps up to three backup files. The `logs/` directory is created automatically, and log files are excluded from Git because they may contain operational details.
 
+## Concurrency and data integrity
+
+The application is designed to handle concurrent web requests without sharing mutable request state:
+
+- Each request receives its own SQLAlchemy database session, which is closed after the request finishes.
+- Checkout and refund operations run inside transactions and roll back together if any step fails.
+- Inventory is decremented with a conditional atomic `UPDATE`, so concurrent checkouts cannot oversell available stock.
+- A unique constraint on refunds prevents the same order from being refunded twice.
+
+The default SQLite database is appropriate for local development and demonstration. SQLite serializes concurrent writes, so a production deployment with heavier traffic should use PostgreSQL. The application does not create a custom thread per request; FastAPI and Uvicorn manage request concurrency.
+
 ## Configuration
 
 Configuration is read from environment variables:
