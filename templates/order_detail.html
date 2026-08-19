@@ -8,20 +8,21 @@
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-dark bg-dark px-3 justify-content-between mb-4">
-        <a class="navbar-brand" href="/dashboard">System Control Center</a>
         <div>
-            <span class="text-white me-3">{{ role }}</span>
-            <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
+            <a class="navbar-brand me-4" href="/dashboard">&larr; System Dashboard</a>
+            <span class="navbar-text text-white-50">Order Transaction Details</span>
         </div>
+        <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
     </nav>
 
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1>Order #{{ order.order_id }}</h1>
-                <p class="text-muted mb-0">Created {{ order.created_at }}</p>
+                <h1 class="mb-1">Order #{{ order.order_id }}</h1>
+                <p class="text-muted mb-1">Review customer details, invoice line items, and order status.</p>
+                <small class="text-muted">Created {{ order.created_at }}</small>
             </div>
-            <a href="{{ back_url }}" class="btn btn-outline-secondary">{{ back_label }}</a>
+            <a href="{{ back_url }}" class="btn btn-outline-secondary" aria-label="{{ back_label }}">&larr; {{ back_label }}</a>
         </div>
 
         {% if role == 'viewer' %}
